@@ -1,1 +1,1054 @@
+Define.h (디파인 헤더)
+#pragma once
+#include <iostream>
+#include <list>
+#include <Windows.h>
 using namespace std;
+#include <math.h>
+#define PIE 3.14f
+#define WINCX 800
+#define WINCY 600
+#define PURE = 0
+#define NOEVENT 0
+#define DEAD 1
+
+typedef struct tagInfo {
+	float fX, fY;
+	float fCX, fCY;
+}INFO;
+
+
+enum OBj {Player, Monster, Bullet, ScrewBullet, Shield, Wall, Mouse, OBj_END};
+
+template <typename T>
+void Safe_Delete(T& p) {
+	if (p) {
+		delete p;
+		p = nullptr;
+	}
+}
+
+extern HWND g_hWnd;
+
+// 유도미사일. 플레이가 쏘는 것. 몬스터가 쏘는 것.  >> 역함수 이용.
+
+---------------------------------------------------------------------
+CObj.h 
+#pragma once
+#include "Define.h"
+
+class CObj abstract 
+{
+public:
+	CObj() {}
+	virtual ~CObj() {}
+public:
+	virtual void Initialize()PURE;
+	virtual int Update()PURE;
+	virtual int Late_Update()PURE;
+	virtual void Render(HDC hDC)PURE;
+	virtual void Release()PURE;
+public:
+	void Update_RECT();
+public:
+	INFO& Get() { return m_tInfo; }
+	void SetCenter(float fx, float fy) { m_tCenter.x = (long)fx, m_tCenter.y = (long)fy; }
+	void SetAngle(float angle) { m_fAngle = angle; }
+	void SetAngle2(float angle) { m_fAngle2 = angle; }
+	bool& GetDead() { return m_Dead; }
+	RECT& GetRect() { return m_tRect; }
+	CObj*& GetTarget() { return m_pTarget; }
+	void SetInfo(float fx, float fy) { m_tInfo.fX = fx, m_tInfo.fY = fy; }
+	void SetTarget(CObj* pTarget) { m_pTarget = pTarget; }
+protected:
+	INFO m_tInfo = { 0.f, 0.f, 0.f, 0.f };
+	POINT m_tCenter = {0, 0};
+	float m_fSpeed = 0.f;
+	RECT m_tRect = { 0, 0, 0, 0 };
+	float m_fAngle = 0.f;
+	float m_fEndX = 0.f;
+	float m_fEndY = 0.f;    // 몬스터, 플레이어, 쉴드, 스크류볼렛, 일반볼렛 얘기하기 아무 문제 없다!
+	float m_fAngle2 = 0.f;
+	bool m_Dead = false;
+	CObj* m_pTarget = nullptr;
+};
+
+------------------------------------------
+CObj.cpp
+#include "CObj.h"
+
+
+
+void CObj::Update_RECT() {
+	m_tRect.left = (long)m_tInfo.fX - (m_tInfo.fCX / 2.f);
+	m_tRect.right = (long)m_tInfo.fX + (m_tInfo.fCX / 2.f);
+	m_tRect.top = (long)m_tInfo.fY - (m_tInfo.fCY / 2.f);
+	m_tRect.bottom = (long)m_tInfo.fY + (m_tInfo.fCY / 2.f);
+}
+
+-------------------------------------------
+CPlayer.h
+#pragma once
+#include "CObj.h"
+
+class CPlayer final : public CObj
+{
+public:
+	CPlayer();
+	~CPlayer();
+public:
+	 void Initialize()override;
+	 int Update()override;
+	 int Late_Update()override;
+	 void Render(HDC hDC)override;
+	 void Release()override;
+public:
+	void COPY(list<CObj*>* pBullet) { m_pBullet = pBullet; }
+	void COPY2(list<CObj*>* pScrewBullet) { m_pScrewBullet = pScrewBullet; }
+	void COPY3(list<CObj*>* pShield) { m_pShield = pShield; }
+	void COPY4(list<CObj*>* pMonster) { m_pMonsterList = pMonster; }  // push back 이 아니야!! 정보 이용하려고!
+private:
+	list<CObj*>* m_pBullet = nullptr;
+	list<CObj*>* m_pScrewBullet = nullptr;
+	list<CObj*>* m_pShield = nullptr;
+	list<CObj*>* m_pMonsterList = nullptr;
+};
+--------------------------------------------
+CPlayer.cpp
+#include "CPlayer.h"
+#include "CAbstractFactory.h"
+CPlayer::CPlayer() {
+
+}
+CPlayer::~CPlayer() {
+
+}
+
+void CPlayer::Initialize() {
+	m_tInfo = { 400.f, 300.f, 50.f, 50.f };
+	m_fSpeed = 10.f;
+}
+
+int CPlayer::Update() {
+	if (GetAsyncKeyState(VK_LEFT)) {
+		if (GetAsyncKeyState(VK_UP)) {
+			m_tInfo.fX -= m_fSpeed / sqrtf(2.f);
+			m_tInfo.fY -= m_fSpeed / sqrtf(2.f);
+		}
+		else if (GetAsyncKeyState(VK_DOWN)) {
+			m_tInfo.fX -= m_fSpeed / sqrtf(2.f);
+			m_tInfo.fY += m_fSpeed / sqrtf(2.f);
+		}
+		else
+			m_tInfo.fX -= m_fSpeed;
+	}
+	if (GetAsyncKeyState(VK_RIGHT)) {
+		if (GetAsyncKeyState(VK_UP)) {
+			m_tInfo.fX += m_fSpeed / sqrtf(2.f);
+			m_tInfo.fY -= m_fSpeed / sqrtf(2.f);
+		}
+		else if (GetAsyncKeyState(VK_DOWN)) {
+			m_tInfo.fX += m_fSpeed / sqrtf(2.f);
+			m_tInfo.fY += m_fSpeed / sqrtf(2.f);
+		}
+		else
+			m_tInfo.fX += m_fSpeed;
+	}
+	if (GetAsyncKeyState(VK_UP)) {
+		m_tInfo.fY -= m_fSpeed;
+	}
+	if (GetAsyncKeyState(VK_DOWN)) {
+		m_tInfo.fY += m_fSpeed;
+	}
+	if (GetAsyncKeyState('A')) {
+		m_fAngle += -15.0f * (PIE / 180.f);
+	}
+	if (GetAsyncKeyState('D')) {
+		m_fAngle += 15.0f * (PIE / 180.f);
+	}
+	if (GetAsyncKeyState('V')) {
+		m_pScrewBullet->push_back(CAbstactFactory<CScrewBullet>::CreatOBj(m_fEndX, m_fEndY,m_fAngle));
+	}
+	m_fEndX = m_tInfo.fX + (50.f * cosf(m_fAngle));
+	m_fEndY = m_tInfo.fY + (50.f * sinf(m_fAngle));
+	if (GetAsyncKeyState('S')) {
+		m_pShield->push_back(CAbstactFactory<CShield>::CreatOBj(m_tInfo.fX, m_tInfo.fY));
+	}
+	
+	for (auto& Shield : *m_pShield) {
+		Shield->SetCenter(m_tInfo.fX, m_tInfo.fY);
+	}
+	if (GetAsyncKeyState(VK_SPACE)) {
+		m_pBullet->push_back(CAbstactFactory<CBullet>::CreatOBj2(m_fEndX, m_fEndY,m_fAngle));
+	} // 순서 상관 있다! 코드는 안전하게 짜는게 중요!
+	for (auto& Bullet : *m_pBullet) {
+		dynamic_cast<CBullet*>(Bullet)->COPY(m_pMonsterList);
+	}
+	__super::Update_RECT();
+	return 0;
+}
+
+int CPlayer::Late_Update() {
+	
+	return NOEVENT;
+}
+
+void CPlayer::Render(HDC hDC) {
+	Rectangle(hDC, m_tRect.left, m_tRect.top, m_tRect.right, m_tRect.bottom);
+	MoveToEx(hDC, m_tInfo.fX, m_tInfo.fY, nullptr);
+	LineTo(hDC, m_fEndX, m_fEndY);
+}
+
+void CPlayer::Release() {
+
+}
+
+-----------------------------------------------------
+CBullet.h
+#pragma once
+#include "CObj.h"
+// 유도탄 구현
+// 몬스터 중 가까운 몬스터에게 유도되는 탄
+// 회전 제한 유도탄(부드러운 회전) (자석식 유도탄, 회전 제한 유도탄(내 목의 회전 한계(가동 범위))) >> 이해했다!
+// 어떻게 몬스터를 받아 오는 가 CBUllet에.
+class CBullet final : public CObj
+{
+public:
+	CBullet();
+	~CBullet();
+public:
+	void Initialize()override;
+	int Update()override;
+	int Late_Update()override;
+	void Render(HDC hDC)override;
+	void Release()override;
+public:
+	void COPY(list<CObj*>* pMonster) { m_pMonsterList = pMonster; }
+private:
+	list<CObj*>* m_pMonsterList = nullptr;   // 이미 있는 몬스터의 정보를 이용함에도 list를 가져와야해.. 아님 Target1, Target2...
+	CObj* m_pMonster = nullptr;
+};
+-----------------------------------------------
+CBullet.cpp
+#include "CBullet.h"
+CBullet::CBullet() {
+
+}
+CBullet::~CBullet() {
+
+}
+
+void CBullet::Initialize() {
+	m_tInfo.fCX = 30.f;
+	m_tInfo.fCY = 30.f;
+	m_fSpeed = 3.f;
+}
+
+int CBullet::Update() { // 가까운 놈을 찾아가겠다!(내가 원하는 몹을 찾는 코드) + (따라가는 코드)
+	if (m_pMonsterList == nullptr || m_pMonsterList->empty()) {
+		m_tInfo.fX += m_fSpeed * cosf(m_fAngle2);
+		m_tInfo.fY += m_fSpeed * sinf(m_fAngle2);
+	} 
+	else {
+		for (auto& pMonster : *m_pMonsterList) {
+			float MinDistance = 9999999.f;
+			float DistanceX = pMonster->Get().fX - m_tInfo.fX;   
+			float DistanceY = pMonster->Get().fY - m_tInfo.fY;
+			float Distance = sqrtf((DistanceX * DistanceX) + (DistanceY * DistanceY));
+
+			if (Distance < MinDistance) {
+				MinDistance = Distance;
+				m_pMonster = pMonster;
+			}
+		}
+		float DistanceX = m_pMonster->Get().fX - m_tInfo.fX;
+		float DistanceY = m_pMonster->Get().fY - m_tInfo.fY;
+		m_fAngle = atan2f(DistanceY, DistanceX);
+
+		m_tInfo.fX += m_fSpeed * cosf(m_fAngle);
+		m_tInfo.fY += m_fSpeed * sinf(m_fAngle);
+	}
+	__super::Update_RECT();
+	return 0;
+}
+
+int CBullet::Late_Update() {
+	if (m_tInfo.fX <= 100 || m_tInfo.fX >= 700 || m_tInfo.fY <= 100 || m_tInfo.fY >= 500) {
+		m_Dead = true;
+	}
+	return NOEVENT;
+}
+
+void CBullet::Render(HDC hDC) {
+	Ellipse(hDC, m_tRect.left, m_tRect.top, m_tRect.right, m_tRect.bottom);
+}
+
+void CBullet::Release() {
+
+}
+-----------------------------------------
+CSrewBullet.h
+#pragma once
+#include "CObj.h"
+class CScrewBullet : public CObj
+{
+public:
+	CScrewBullet();
+	~CScrewBullet();
+public:
+	void Initialize()override;
+	int Update()override;
+	int Late_Update()override;
+	void Render(HDC hDC)override;
+	void Release()override;
+};
+-----------------------------------------
+CScrewBullet.cpp
+#include "CScrewBullet.h"
+
+CScrewBullet::CScrewBullet() {
+
+}
+CScrewBullet::~CScrewBullet() {
+
+}
+
+void CScrewBullet::Initialize() {
+	m_tInfo.fCX = 40.f;
+	m_tInfo.fCY = 40.f;
+}
+
+int CScrewBullet::Update() {
+	if (m_Dead == true) {
+		return DEAD;
+	}
+	m_fAngle += 10.f * (PIE / 180.f);  // 회전 속도
+	m_fEndX = (float)m_tCenter.x + (20.f * cosf(m_fAngle));  // 20은 중심부터 거리
+	m_fEndY = (float)m_tCenter.y + (20.f * sinf(m_fAngle));
+	m_tInfo.fX = m_fEndX;
+	m_tInfo.fY = m_fEndY;
+	//float fRadius = 45.f;
+	//m_tInfo.fX = (float)m_tCenter.x + (sinf(m_fAngle) * fRadius * -sinf(m_fAngle2));
+	//m_tInfo.fY = (float)m_tCenter.y + (sinf(m_fAngle) * fRadius * cosf(m_fAngle2));
+
+	m_tCenter.x += (long)10.f * cosf(m_fAngle2); // 20은 총알 날라가는 속도
+	m_tCenter.y += (long)10.f * sinf(m_fAngle2);
+
+	__super::Update_RECT();
+	return NOEVENT;
+}
+
+int CScrewBullet::Late_Update() {
+	if (m_tInfo.fX <= 100 || m_tInfo.fX >= 700 || m_tInfo.fY <= 100 || m_tInfo.fY >= 500) {
+		m_Dead = true;
+	}
+	return NOEVENT;
+}
+
+void CScrewBullet::Render(HDC hDC) {
+	Ellipse(hDC, m_tRect.left, m_tRect.top, m_tRect.right, m_tRect.bottom);
+}
+
+void CScrewBullet::Release() {
+
+}
+------------------------------------------------
+CShield.h
+#pragma once
+#include "CObj.h"
+class CShield : public CObj
+{	public:
+		CShield();
+		~CShield();
+	public:
+		void Initialize()override;
+		int Update()override;
+		int Late_Update()override;
+		void Render(HDC hDC)override;
+		void Release()override;
+};
+
+-------------------------------------------
+CShield.cpp
+#include "CShield.h"
+
+CShield::CShield() {
+
+}
+CShield::~CShield() {
+
+}
+
+void CShield::Initialize() {
+	m_tInfo.fCX = 30;
+	m_tInfo.fCY = 30;
+
+}
+
+int CShield::Update() {
+	if (m_Dead == true)
+		return DEAD;
+	m_fAngle += 10.f * (PIE / 180.f);
+	m_tInfo.fX = m_tCenter.x + (50.f * cosf(m_fAngle));
+	m_tInfo.fY = m_tCenter.y + (50.f * sinf(m_fAngle));
+
+	__super::Update_RECT();
+	return 0;
+
+}
+
+int CShield::Late_Update() {
+	if (m_tInfo.fX <= 100 || m_tInfo.fX >= 700 || m_tInfo.fY <= 100 || m_tInfo.fY >= 500) {
+		m_Dead = true;
+	}
+	return NOEVENT;
+}
+
+void CShield::Render(HDC hDC) {
+	Ellipse(hDC, m_tRect.left, m_tRect.top, m_tRect.right, m_tRect.bottom);
+}
+
+void CShield::Release() {
+
+}
+
+---------------------------------
+CMouse.h
+#pragma once
+#include "CObj.h" 
+class CMouse : public CObj
+{
+public:
+	CMouse();
+	~CMouse();
+public:
+	void Initialize()override;
+	int Update()override;
+	int Late_Update()override;
+	void Render(HDC hDC)override;
+	void Release()override;
+};
+-------------------------------
+CMouse.cpp
+#include "CMouse.h"
+
+CMouse::CMouse() {
+
+}
+CMouse::~CMouse() {
+
+}
+
+void CMouse::Initialize() {
+
+}
+
+int CMouse::Update() {
+	return 0;
+}
+
+int CMouse::Late_Update() {
+	return NOEVENT;
+}
+
+void CMouse::Render(HDC hDC) {
+
+}
+
+void CMouse::Release() {
+
+}
+
+----------------------------------
+CMonster.h
+#pragma once
+#include "CObj.h" 
+class CPlayer;
+
+class CMonster : public CObj
+{
+public:
+	CMonster();
+	~CMonster();
+public:
+	void Initialize()override;
+	int Update()override;
+	int Late_Update()override;
+	void Render(HDC hDC)override;
+	void Release()override;
+public:
+	void COPY(CObj* pPlayer) { m_pPlayer = pPlayer; }
+private:
+	CObj* m_pPlayer = nullptr;
+};
+----------------------------------
+CMonster.cpp
+#include "CMonster.h"
+#include "CPlayer.h"
+
+CMonster::CMonster() {
+
+}
+CMonster::~CMonster() {
+
+}
+
+void CMonster::Initialize() {
+	m_tInfo.fCX = 50.f;
+	m_tInfo.fCY = 50.f;
+	m_fSpeed = 3.f;
+}
+
+int CMonster::Update() {
+	float fDistanceX = m_pPlayer->Get().fX - m_tInfo.fX;  // 목적지가 어디인지 봐야한다. 벡터여서
+	float fDistanceY = m_pPlayer->Get().fY - m_tInfo.fY;  // 목적지 - 출발지 (벡터 쪼개짐 생각~) >> 이해 함!
+	float fDistance = sqrtf(((fDistanceX * fDistanceX) + (fDistanceY * fDistanceY)));
+	m_fAngle = acosf(fDistanceX / fDistance);
+
+	if (m_tInfo.fY > m_pPlayer->Get().fY) {   // 나는 데카르트로 생각했으니까, 쓸 때는 반대로!
+		m_fAngle = (2.f * PIE)*(PIE / 180.f) - m_fAngle;
+	}
+	m_tInfo.fX += m_fSpeed * cosf(m_fAngle);
+	m_tInfo.fY += m_fSpeed * sinf(m_fAngle);
+
+	__super::Update_RECT();
+	return 0;
+}
+
+int CMonster::Late_Update() {
+	return NOEVENT;
+}
+
+void CMonster::Render(HDC hDC) {
+	Rectangle(hDC, m_tRect.left, m_tRect.top, m_tRect.right, m_tRect.bottom);
+}
+
+void CMonster::Release() {
+
+}
+-----------------------------------------
+CWall.h
+#pragma once
+#include "CObj.h" 
+class CWall : public CObj
+{
+public:
+	CWall();
+	~CWall();
+public:
+	void Initialize()override;
+	int Update()override;
+	int Late_Update()override;
+	void Render(HDC hDC)override;
+	void Release()override;
+};
+----------------------------------
+CWall.cpp
+#include "CWall.h"
+// 벽을 만들어서, 플레이어랑 벽의 충돌처리를 구현한다! 플레이어가 밀려나도록!
+CWall::CWall() {
+
+}
+CWall::~CWall() {
+
+}
+
+void CWall::Initialize() {
+	m_tInfo.fCX = 30;
+	m_tInfo.fCY = 30;
+}
+
+int CWall::Update() {
+	__super::Update_RECT();
+	return 0;
+}
+
+int CWall::Late_Update() {
+	return NOEVENT;
+}
+
+void CWall::Render(HDC hDC) {
+	Rectangle(hDC, m_tRect.left, m_tRect.top, m_tRect.right, m_tRect.bottom);
+}
+
+void CWall::Release() {
+
+}
+---------------------------------------
+CCollisionMgr.h
+#pragma once
+#include "CMaingame.h"
+class CCollisionMgr
+{
+public:
+	static void CollisionRect(list<CObj*>& obj1, list<CObj*>& obj2);
+	static void CollisionCircle(list<CObj*>& obj1, list<CObj*>& obj2);
+	static void CollisionRect2(list<CObj*>& obj1, list<CObj*>& obj2);
+public:
+	static bool Collision(CObj*& Monster, CObj*& ScrewBullet);
+};
+
+------------------------------------
+CCollisionMgr.cpp
+#include "CCollisionMgr.h"
+RECT rc{};
+void CCollisionMgr::CollisionRect(list<CObj*>& obj1, list<CObj*>& obj2) {
+	for (auto& OBj : obj1) {
+		for (auto& OBj2 : obj2) {
+			if (IntersectRect(&rc, &OBj->GetRect(), &OBj2->GetRect())) {
+				OBj->GetDead() = true;
+				OBj2->GetDead() = true;
+			}
+		}
+	}
+}
+
+
+void CCollisionMgr::CollisionCircle(list<CObj*>& obj1, list<CObj*>& obj2) {
+	for (auto& OBj : obj1) {
+		for (auto& OBj2 : obj2) {
+			if (Collision(OBj, OBj2)) {
+				OBj->GetDead() = true;
+				OBj->GetDead() = true;
+			}
+		}
+	}
+}
+
+bool CCollisionMgr::Collision(CObj*& Monster, CObj*& ScrewBullet) {
+	float radSum = (Monster->Get().fCX + ScrewBullet->Get().fCX) * 0.5f;
+	float DistanceX = abs(Monster->Get().fX - ScrewBullet->Get().fX);
+	float DistanceY = abs(Monster->Get().fY - ScrewBullet->Get().fY);
+	float Distance = sqrtf(DistanceX * DistanceX + DistanceY * DistanceY);
+
+	return radSum >= Distance;
+}
+
+void CCollisionMgr::CollisionRect2(list<CObj*>& obj1, list<CObj*>& obj2) {
+	RECT IntersectRECT{};
+	for (auto& OBj : obj1) {
+		for (auto& OBj2 : obj2) {
+			if (IntersectRect(&IntersectRECT, &OBj->GetRect(), &OBj2->GetRect())) {
+				float Width = (float)IntersectRECT.right - IntersectRECT.left;
+				float height = (float)IntersectRECT.bottom - IntersectRECT.top;
+
+				if (Width >= height) {
+					if (OBj->Get().fY <= OBj2->Get().fY) {  // 상 충돌(플레이어가 위)
+						OBj->Get().fY -= height;
+						OBj->Update_RECT();   // 바로 새로고침!
+					}
+					else {
+						OBj->Get().fY += height;
+						OBj->Update_RECT();
+					}
+				}
+				else {
+					if (OBj->Get().fX >= OBj2->Get().fX) {  // 우 충돌
+						OBj->Get().fX += Width;
+						OBj->Update_RECT();
+					}
+					else {
+						OBj->Get().fX -= Width;
+						OBj->Update_RECT();
+					}
+				}
+			}
+		}
+	}
+ }
+------------------------------------
+CMaingame.h
+#pragma once
+#include "CBullet.h"
+#include "CPlayer.h"
+#include "CShield.h"
+#include "CScrewBullet.h"
+#include "CMonster.h"
+#include "CWall.h"
+
+class CMaingame
+{
+public:
+	CMaingame();
+	~CMaingame();
+public:
+	void Initialize();
+	void Update();
+	void Late_Update();
+	void Render();
+	void Release();
+private:
+	HDC m_hDC;
+	list<CObj*> m_OBjList[OBj_END];
+	DWORD			m_dwTime = 0;
+	int				m_iFPS = 0;
+	TCHAR			m_szFPS[32];
+	HDC    m_hBackDC;    // 백버퍼 (가상 도화지 DC)
+	HBITMAP m_hBitmap;
+};
+-------------------------------------------------
+CMaingame.cpp
+#include "CMaingame.h"
+#include "CAbstractFactory.h"
+#include "CCollisionMgr.h"
+HWND g_hWnd;
+CMaingame::CMaingame() {
+
+}
+CMaingame::~CMaingame() {
+	Release();
+}
+
+void CMaingame::Initialize() {
+	m_hDC = GetDC(g_hWnd);            // 더블 버퍼링 해결 
+	m_hBackDC = CreateCompatibleDC(m_hDC);
+	m_hBitmap = CreateCompatibleBitmap(m_hDC, WINCX, WINCY);
+	SelectObject(m_hBackDC, m_hBitmap);
+	m_OBjList[Player].push_back(CAbstactFactory<CPlayer>::CreatOBj());
+	dynamic_cast<CPlayer*>(m_OBjList[Player].front())->COPY(&m_OBjList[Bullet]);
+	dynamic_cast<CPlayer*>(m_OBjList[Player].front())->COPY2(&m_OBjList[ScrewBullet]);
+	dynamic_cast<CPlayer*>(m_OBjList[Player].front())->COPY3(&m_OBjList[Shield]);
+	dynamic_cast<CPlayer*>(m_OBjList[Player].front())->COPY4(&m_OBjList[Monster]);
+	for (int i = 0; i < 2; i++) {
+		m_OBjList[Monster].push_back(CAbstactFactory<CMonster>::CreatOBj());
+	
+	}
+	int i = 0;
+	for (auto iter = m_OBjList[Monster].begin(); iter != m_OBjList[Monster].end(); iter++) {	
+		(*iter)->Get().fX = 200;
+		(*iter)->Get().fY = 200 + ((float)i*400);
+		++i;
+		dynamic_cast<CMonster*>(*iter)->COPY(m_OBjList[Player].front());
+	}
+	for (int i = 0; i < 9; i++) {
+		m_OBjList[Wall].push_back(CAbstactFactory<CWall>::CreatOBj());
+	}
+	int j = 0;
+	auto iter = m_OBjList[Wall].begin();
+		for (int i = 0; i < 3; i++) {      // 이중루프의 논리
+			for (int j = 0; j < 3; j++) {
+				(*iter)->Get().fX = 200 + 100 * i;
+				(*iter)->Get().fY = 200 + 100 * j;
+				++iter;
+			}
+			if (iter == m_OBjList[Wall].end())
+				break;
+		}
+}
+
+void CMaingame::Update() {
+	for (int i = 0; i < OBj_END; i++) {
+		for (auto& OBj : m_OBjList[i]) {
+			OBj->Update();
+		}
+	}
+}
+void CMaingame::Late_Update() {
+	for (int i = 0; i < OBj_END; i++) {
+		for (auto& OBj : m_OBjList[i]) {
+			OBj->Late_Update();
+		}
+	}
+	for (int i = 0; i < OBj_END; i++) {
+		for (auto iter = m_OBjList[i].begin(); m_OBjList[i].end() != iter;) {
+			if ((*iter)->GetDead() == true) {
+				Safe_Delete<CObj*>(*iter);
+				iter = m_OBjList[i].erase(iter);
+			}
+			else
+				++iter;
+		}
+	}
+
+	CCollisionMgr::CollisionRect(m_OBjList[Bullet], m_OBjList[Monster]);
+	CCollisionMgr::CollisionRect(m_OBjList[Player], m_OBjList[Monster]);
+	CCollisionMgr::CollisionRect(m_OBjList[Monster], m_OBjList[Shield]);
+	CCollisionMgr::CollisionCircle(m_OBjList[Monster], m_OBjList[ScrewBullet]);
+	CCollisionMgr::CollisionRect2(m_OBjList[Player], m_OBjList[Wall]); // 튕겨나오는건 반대방향으로 가면됨.
+}
+
+void CMaingame::Render() {
+	Rectangle(m_hBackDC, 0, 0, WINCX, WINCY);
+	Rectangle(m_hBackDC, 100, 100, WINCX - 100, WINCY - 100);
+	
+	for (int i = 0; i < OBj_END; i++) {
+		for (auto& OBj : m_OBjList[i]) {
+			OBj->Render(m_hBackDC);
+		}
+	}
+	BitBlt(m_hDC, 0, 0, WINCX, WINCY, m_hBackDC, 0, 0, SRCCOPY);
+	++m_iFPS;
+
+	if (m_dwTime + 1000 < GetTickCount64())
+	{
+		swprintf_s(m_szFPS, L"FPS : %d", m_iFPS);
+		/*TextOut(m_hDC, 100, 100, m_szFPS, lstrlen(m_szFPS));*/
+
+		SetWindowText(g_hWnd, m_szFPS);
+
+		m_dwTime = GetTickCount64();
+		m_iFPS = 0;
+	}
+
+}
+
+void CMaingame::Release() {
+	for (int i = 0; i < OBj_END; i++) {
+		for (auto& OBj : m_OBjList[i]) {
+			Safe_Delete<CObj*>(OBj);
+		}
+		m_OBjList[i].clear();
+	}
+	ReleaseDC(g_hWnd, m_hDC);
+}
+---------------------------------------------------
+CAbstractFactory.h
+#pragma once
+#include "CMaingame.h"
+
+template <typename T>
+class CAbstactFactory {
+public:
+	CAbstactFactory() {}
+	~CAbstactFactory() {}
+public:
+	static CObj* CreatOBj() {
+		CObj* pOBj = new T;
+		pOBj->Initialize();
+		return pOBj;
+	}
+	static CObj* CreatOBj(float fx, float fy, float angle) {
+		CObj* pOBj = new T;
+		pOBj->Initialize();
+		pOBj->SetCenter(fx, fy);
+		pOBj->SetAngle2(angle);
+		return pOBj;
+	}
+	static CObj* CreatOBj(float fx, float fy) {
+		CObj* pOBj = new T;
+		pOBj->Initialize();
+		pOBj->SetCenter(fx, fy);
+		return pOBj;
+	}
+	static CObj* CreatOBj2(float fx, float fy, float angle) {
+		CObj* pOBj = new T;
+		pOBj->Initialize();
+		pOBj->SetInfo(fx, fy);
+		pOBj->SetAngle2(angle);
+		return pOBj;
+	}
+};
+-----------------------------------------
+specimen.cpp
+
+#include "framework.h"
+#include "specimen.h"
+#include "CMaingame.h"
+
+#define MAX_LOADSTRING 100
+
+// 전역 변수:
+HINSTANCE hInst;                                // 현재 인스턴스입니다.
+WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
+WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
+
+// 이 코드 모듈에 포함된 함수의 선언을 전달합니다:
+ATOM                MyRegisterClass(HINSTANCE hInstance);
+BOOL                InitInstance(HINSTANCE, int);
+LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+
+int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
+                     _In_opt_ HINSTANCE hPrevInstance,
+                     _In_ LPWSTR    lpCmdLine,
+                     _In_ int       nCmdShow)
+{
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(lpCmdLine);
+
+    // TODO: 여기에 코드를 입력합니다.
+
+    // 전역 문자열을 초기화합니다.
+    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+    LoadStringW(hInstance, IDC_SPECIMEN, szWindowClass, MAX_LOADSTRING);
+    MyRegisterClass(hInstance);
+
+    // 애플리케이션 초기화를 수행합니다:
+    if (!InitInstance (hInstance, nCmdShow))
+    {
+        return FALSE;
+    }
+
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_SPECIMEN));
+
+    MSG msg;
+    CMaingame maingame;
+    maingame.Initialize();
+    DWORD       dwTime = GetTickCount64();
+
+    // 기본 메시지 루프입니다:
+    while (true)
+    {
+        if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT)
+                break;
+
+            if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+            {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
+        }
+        else {
+            if (dwTime + 10 < GetTickCount64())
+            {
+                maingame.Update();
+                maingame.Late_Update();
+                maingame.Render();
+
+                dwTime = GetTickCount64();
+            }
+        }
+    }
+
+    return (int) msg.wParam;
+}
+
+
+
+//
+//  함수: MyRegisterClass()
+//
+//  용도: 창 클래스를 등록합니다.
+//
+ATOM MyRegisterClass(HINSTANCE hInstance)
+{
+    WNDCLASSEXW wcex;
+
+    wcex.cbSize = sizeof(WNDCLASSEX);
+
+    wcex.style          = CS_HREDRAW | CS_VREDRAW;
+    wcex.lpfnWndProc    = WndProc;
+    wcex.cbClsExtra     = 0;
+    wcex.cbWndExtra     = 0;
+    wcex.hInstance      = hInstance;
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_SPECIMEN));
+    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
+    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
+    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_SPECIMEN);
+    wcex.lpszClassName  = szWindowClass;
+    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+
+    return RegisterClassExW(&wcex);
+}
+
+//
+//   함수: InitInstance(HINSTANCE, int)
+//
+//   용도: 인스턴스 핸들을 저장하고 주 창을 만듭니다.
+//
+//   주석:
+//
+//        이 함수를 통해 인스턴스 핸들을 전역 변수에 저장하고
+//        주 프로그램 창을 만든 다음 표시합니다.
+//
+BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+{
+    RECT rcWnd{ 0, 0, WINCX, WINCY };
+   hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
+
+   AdjustWindowRect(&rcWnd, WS_OVERLAPPEDWINDOW, FALSE);
+
+   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+      CW_USEDEFAULT, CW_USEDEFAULT,rcWnd.right - rcWnd.left, rcWnd.bottom - rcWnd.top, nullptr, nullptr, hInstance, nullptr);
+
+   g_hWnd = hWnd;
+
+   if (!hWnd)
+   {
+      return FALSE;
+   }
+
+   ShowWindow(hWnd, nCmdShow);
+   UpdateWindow(hWnd);
+
+   return TRUE;
+}
+
+//
+//  함수: WndProc(HWND, UINT, WPARAM, LPARAM)
+//
+//  용도: 주 창의 메시지를 처리합니다.
+//
+//  WM_COMMAND  - 애플리케이션 메뉴를 처리합니다.
+//  WM_PAINT    - 주 창을 그립니다.
+//  WM_DESTROY  - 종료 메시지를 게시하고 반환합니다.
+//
+//
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message)
+    {
+    case WM_ERASEBKGND:
+        return 1;
+    case WM_COMMAND:
+        {
+            int wmId = LOWORD(wParam);
+            // 메뉴 선택을 구문 분석합니다:
+            switch (wmId)
+            {
+            case IDM_ABOUT:
+                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+                break;
+            case IDM_EXIT:
+                DestroyWindow(hWnd);
+                break;
+            default:
+                return DefWindowProc(hWnd, message, wParam, lParam);
+            }
+        }
+        break;
+    case WM_KEYDOWN:
+        switch (wParam) {
+        case VK_ESCAPE:
+            PostQuitMessage(0);
+            break;
+        }
+        break;
+    case WM_PAINT:
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hWnd, &ps);
+            // TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다...
+            EndPaint(hWnd, &ps);
+        }
+        break;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return 0;
+}
+
+// 정보 대화 상자의 메시지 처리기입니다.
+INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    UNREFERENCED_PARAMETER(lParam);
+    switch (message)
+    {
+    case WM_INITDIALOG:
+        return (INT_PTR)TRUE;
+
+    case WM_COMMAND:
+        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+        {
+            EndDialog(hDlg, LOWORD(wParam));
+            return (INT_PTR)TRUE;
+        }
+        break;
+    }
+    return (INT_PTR)FALSE;
+}
+--------------------------------------------------------- " 끝 " 
