@@ -1,0 +1,476 @@
+Define.h
+#pragma once
+#include <iostream>
+#include <list>
+#include <Windows.h>
+using namespace std;
+#include <math.h>
+#define PIE 3.14f
+#define WINCX 800
+#define WINCY 600
+#define PURE = 0
+#define NOEVENT 0
+#define DEAD 1
+
+typedef struct tagInfo {
+	float fX, fY;
+	float fCX, fCY;
+}INFO;
+
+
+enum OBj {Player, Monster, Bullet, ScrewBullet, Shield, Wall, Mouse, OBj_END};
+
+template <typename T>
+void Safe_Delete(T& p) {
+	if (p) {
+		delete p;
+		p = nullptr;
+	}
+}
+
+extern HWND g_hWnd;
+-------------------------------
+COBj.h
+#pragma once
+#include "Define.h"
+
+class CObj abstract 
+{
+public:
+	CObj();
+	virtual ~CObj();
+public:
+	virtual void Initialize()PURE;
+	virtual void Update()PURE;
+	virtual int Late_Update()PURE;
+	virtual void Render(HDC hDC)PURE;
+	virtual void Release()PURE;
+public:
+	void Update_RECT();
+private:
+	INFO m_tInfo = { 0.f, 0.f, 0.f, 0.f };
+	POINT m_tCenter = {0, 0};
+	float fSpeed = 0.f;
+	RECT m_tRect = { 0, 0, 0, 0 };
+	float m_fAngle = 0.f;
+	float m_fEndX = 0.f;
+	float m_fEndY = 0.f;    // 몬스터, 플레이어, 쉴드, 스크류볼렛, 일반볼렛 얘기하기 아무 문제 없다!
+};
+-------------------------------------------------------
+CObj.cpp
+#include "CObj.h"
+
+CObj::CObj() {
+
+}
+CObj::~CObj() {
+
+}
+
+void CObj::Initialize() {
+
+}
+
+void CObj::Update() {
+
+}
+
+int CObj::Late_Update() {
+
+}
+
+void CObj::Render(HDC hDC) {
+
+}
+
+void CObj::Release() {
+
+}
+
+void CObj::Update_RECT() {
+
+}
+----------------------------
+CPlayer.h
+#pragma once
+#include "CObj.h"
+class CPlayer final : public CObj
+{
+public:
+	CPlayer();
+	~CPlayer();
+public:
+	 void Initialize()override;
+	 void Update()override;
+	 int Late_Update()override;
+	 void Render(HDC hDC)override;
+	 void Release()override;
+};
+----------------------------
+CPlayer.cpp
+#include "CPlayer.h"
+CPlayer::CPlayer() {
+
+}
+CPlayer::~CPlayer() {
+
+}
+
+void CPlayer::Initialize() {
+
+}
+
+void CPlayer::Update() {
+
+}
+
+int CPlayer::Late_Update() {
+
+}
+
+void CPlayer::Render(HDC hDC) {
+
+}
+
+void CPlayer::Release() {
+
+}
+
+---------------------------
+CScrewBullet.h
+#pragma once
+#include "CObj.h"
+class CScrewBullet : public CObj
+{
+public:
+	CScrewBullet();
+	~CScrewBullet();
+public:
+	void Initialize()override;
+	void Update()override;
+	int Late_Update()override;
+	void Render(HDC hDC)override;
+	void Release()override;
+};
+
+-------------------
+CScrewBullet.cpp
+#include "CScrewBullet.h"
+
+CScrewBullet::CScrewBullet() {
+
+}
+CScrewBullet::~CScrewBullet() {
+
+}
+
+void CScrewBullet::Initialize() {
+
+}
+
+void CScrewBullet::Update() {
+
+}
+
+int CScrewBullet::Late_Update() {
+
+}
+
+void CScrewBullet::Render(HDC hDC) {
+
+}
+
+void CScrewBullet::Release() {
+
+}
+
+----------------------------
+CBullet.h
+#pragma once
+#include "CObj.h"
+
+class CBullet final : public CObj
+{
+public:
+	CBullet();
+	~CBullet();
+public:
+	void Initialize()override;
+	void Update()override;
+	int Late_Update()override;
+	void Render(HDC hDC)override;
+	void Release()override;
+};
+---------------
+CBullet.cpp
+#include "CBullet.h"
+CBullet::CBullet() {
+
+}
+CBullet::~CBullet() {
+
+}
+
+void CBullet::Initialize() {
+
+}
+
+void CBullet::Update() {
+
+}
+
+int CBullet::Late_Update() {
+
+}
+
+void CBullet::Render(HDC hDC) {
+
+}
+
+void CBullet::Release() {
+
+}
+-------------------------------------
+CMonster.h
+#pragma once
+#include "CObj.h" 
+class CMonster : public CObj
+{
+public:
+	CMonster();
+	~CMonster();
+public:
+	void Initialize()override;
+	void Update()override;
+	int Late_Update()override;
+	void Render(HDC hDC)override;
+	void Release()override;
+};
+-----------------------
+CMonster.cpp
+#include "CMonster.h"
+
+CMonster::CMonster() {
+
+}
+CMonster::~CMonster() {
+
+}
+
+void CMonster::Initialize() {
+
+}
+
+void CMonster::Update() {
+
+}
+
+int CMonster::Late_Update() {
+
+}
+
+void CMonster::Render(HDC hDC) {
+
+}
+
+void CMonster::Release() {
+
+}
+
+--------------------------
+CMouse.h
+#pragma once
+#include "CObj.h" 
+class CMouse : public CObj
+{
+public:
+	CMouse();
+	~CMouse();
+public:
+	void Initialize()override;
+	void Update()override;
+	int Late_Update()override;
+	void Render(HDC hDC)override;
+	void Release()override;
+};
+------------------------
+CMouse.cpp
+#include "CMouse.h"
+
+CMouse::CMouse() {
+
+}
+CMouse::~CMouse() {
+
+}
+
+void CMouse::Initialize() {
+
+}
+
+void CMouse::Update() {
+
+}
+
+int CMouse::Late_Update() {
+
+}
+
+void CMouse::Render(HDC hDC) {
+
+}
+
+void CMouse::Release() {
+
+}
+-------------------------------
+CShield.h
+#pragma once
+#include "CObj.h"
+class CShield : public CObj
+{	public:
+		CShield();
+		~CShield();
+	public:
+		void Initialize()override;
+		void Update()override;
+		int Late_Update()override;
+		void Render(HDC hDC)override;
+		void Release()override;
+};
+
+--------------------------
+CShield.cpp
+#include "CShield.h"
+
+CShield::CShield() {
+
+}
+CShield::~CShield() {
+
+}
+
+void CShield::Initialize() {
+
+}
+
+void CShield::Update() {
+
+}
+
+int CShield::Late_Update() {
+
+}
+
+void CShield::Render(HDC hDC) {
+
+}
+
+void CShield::Release() {
+
+}
+
+---------------------------
+CWall.h
+#pragma once
+#include "CObj.h" 
+class CWall : public CObj
+{
+public:
+	CWall();
+	~CWall();
+public:
+	void Initialize()override;
+	void Update()override;
+	int Late_Update()override;
+	void Render(HDC hDC)override;
+	void Release()override;
+};
+
+-------------------------
+CWall.cpp
+#include "CWall.h"
+
+CWall::CWall() {
+
+}
+CWall::~CWall() {
+
+}
+
+void CWall::Initialize() {
+
+}
+
+void CWall::Update() {
+
+}
+
+int CWall::Late_Update() {
+
+}
+
+void CWall::Render(HDC hDC) {
+
+}
+
+void CWall::Release() {
+
+}
+---------------------------------------
+CMaingame.h
+#include "CShield.h"
+#include "CScrewBullet.h"
+#include "CMonster.h"
+#include "CWall.h"
+
+class CMaingame
+{
+public:
+	CMaingame();
+	~CMaingame();
+public:
+	void Initialize();
+	void Update();
+	int Late_Update();
+	void Render();
+	void Release();
+private:
+	HDC m_hDC;
+	list<CObj*> ObjList[OBj_END];
+};
+--------------------------------
+CMaingame.cpp
+#include "CMaingame.h"
+HWND g_hWnd;
+CMaingame::CMaingame() {
+
+}
+CMaingame::~CMaingame() {
+	Release();
+}
+
+void CMaingame::Initialize() {
+
+}
+
+void CMaingame::Update() {
+
+}
+
+int CMaingame::Late_Update() {
+
+}
+
+void CMaingame::Render() {
+	m_hDC = GetDC(g_hWnd);
+}
+
+void CMaingame::Release() {
+
+	ReleaseDC(g_hWnd, m_hDC);
+}
+--------------------------
+CCollisionMgr.h
+
+------------------------------
