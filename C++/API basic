@@ -1,0 +1,54 @@
+// 더블 버퍼링 해결
+m_hDC = GetDC(g_hWnd);         
+m_hBackDC = CreateCompatibleDC(m_hDC);
+m_hBitmap = CreateCompatibleBitmap(m_hDC, WINCX, WINCY);
+SelectObject(m_hBackDC, m_hBitmap);
+
+// 화면 조정
+BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+{
+    RECT rcWnd{ 0, 0, WINCX, WINCY };
+   hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
+
+   AdjustWindowRect(&rcWnd, WS_OVERLAPPEDWINDOW, FALSE);
+
+   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+      CW_USEDEFAULT, CW_USEDEFAULT,rcWnd.right - rcWnd.left, rcWnd.bottom - rcWnd.top, nullptr, nullptr, hInstance, nullptr);
+
+   g_hWnd = hWnd;
+
+   if (!hWnd)
+   {
+      return FALSE;
+   }
+
+   ShowWindow(hWnd, nCmdShow);
+   UpdateWindow(hWnd);
+
+   return TRUE;
+}
+
+// Peekmessage 적용
+if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+    if (msg.message == WM_QUIT)
+        break;
+   .....
+}
+else { }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
